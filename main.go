@@ -54,13 +54,9 @@ func getDirectories(items gjson.Result, baseUrl string, rawFileUrl string) ([]st
 	var directoryUrls []string
 
 	items.ForEach(func(_, item gjson.Result) bool {
-		
-		//name := item.Get("name").Str
 		path := url.PathEscape(item.Get("path").Str)
 		contentType := item.Get("contentType").Str
-		
-		//fmt.Printf("Name: %s, Path: %s, contentType: %s\n", name, path, contentType)
-		
+				
 		switch contentType {
 			case "file":
 				fileUrls = append(fileUrls, rawFileUrl + "/" + path)
@@ -70,14 +66,6 @@ func getDirectories(items gjson.Result, baseUrl string, rawFileUrl string) ([]st
 
 		return true
 	})
-
-	//for _, fileUrl := range fileUrls {
-	//	fmt.Println("File URL: " + fileUrl)
-	//}
-
-	//for _, directoryUrl := range directoryUrls {
-	//	fmt.Println("directory URL: " + directoryUrl)
-	//}
 
 	return directoryUrls, fileUrls
 }
@@ -98,7 +86,7 @@ given an array of directories (from root)
 if no directories return
 otherwise find all sub directories of each directory - for each:
 	call self with array of newly discovered sub directories
-
+	also append found files to allFileUrls
 */
 func recursiveDirectoryDepthFirstSearch(directories []string, rawFileUrl string, baseUrl string, allFileUrls *[]string) {
 	if len(directories) == 0 {
