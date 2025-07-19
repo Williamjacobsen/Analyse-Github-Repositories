@@ -49,7 +49,7 @@ func getJson(html string, startOfJson string) string {
 	return json
 }
 
-func getDirectories(items gjson.Result, baseUrl string, rawFileUrl string) []string {
+func getDirectories(items gjson.Result, baseUrl string, rawFileUrl string) ([]string, []string) {
 	var fileUrls []string
 	var directoryUrls []string
 
@@ -79,10 +79,10 @@ func getDirectories(items gjson.Result, baseUrl string, rawFileUrl string) []str
 	//	fmt.Println("directory URL: " + directoryUrl)
 	//}
 
-	return directoryUrls
+	return directoryUrls, fileUrls
 }
 
-func getDirectoriesWrapper(url string, rawFileUrl string, baseUrl string) []string {
+func getDirectoriesWrapper(url string, rawFileUrl string, baseUrl string) ([]string, []string) {
 	html := getHtml(url)
 
 	json := getJson(html, `{"payload":{`)
@@ -100,7 +100,7 @@ otherwise find all sub directories of each directory - for each:
 	call self with array of newly discovered sub directories
 
 */
-func recursiveDirectoryDepthFirstSearch(directories []string, rawFileUrl string, baseUrl string) {
+func recursiveDirectoryDepthFirstSearch(directories []string, rawFileUrl string, baseUrl string, allFileUrls *[]string) {
 	if len(directories) == 0 {
 		return
 	}
@@ -108,8 +108,11 @@ func recursiveDirectoryDepthFirstSearch(directories []string, rawFileUrl string,
 	for _, directory := range directories {
 		fmt.Println("Visiting:", directory)
 
-		subDirectories := getDirectoriesWrapper(directory, rawFileUrl, baseUrl)
-		recursiveDirectoryDepthFirstSearch(subDirectories, rawFileUrl, baseUrl)
+		subDirectories, fileUrls := getDirectoriesWrapper(directory, rawFileUrl, baseUrl)
+
+		*allFileUrls = append(*allFileUrls, fileUrls...)
+
+		recursiveDirectoryDepthFirstSearch(subDirectories, rawFileUrl, baseUrl, allFileUrls)
 	}
 }
 
@@ -135,7 +138,14 @@ func main() {
 	json := getJson(html, `{"props":{"initialPayload":`)
 	items := gjson.Get(json, "props.initialPayload.tree.items")
 
-	rootDirectoriesUrls := getDirectories(items, url, rawFileUrl)
+	rootDirectoriesUrls, rootFileUrls := getDirectories(items, url, rawFileUrl)
 
-	recursiveDirectoryDepthFirstSearch(rootDirectoriesUrls, rawFileUrl, url)
+	var allFileUrls []string
+	allFileUrls = append(allFileUrls, rootFileUrls...)
+
+	recursiveDirectoryDepthFirstSearch(rootDirectoriesUrls, rawFileUrl, url, &allFileUrls)
+
+	for _, fileUrl := range allFileUrls {
+		fmt.Println(fileUrl)
+	}
 }
