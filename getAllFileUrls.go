@@ -116,24 +116,23 @@ func getAllFileUrls() []string {
 		And the JSON path is "payload.tree.items"
 	*/
 
-	url := "https://github.com/Williamjacobsen/ClosedAI/tree/main"
-	branch := "main"
+	// TODO: Error if it doesn't have /tree/main surffix
 
-	repo := strings.TrimPrefix(url, "https://github.com/")
+	repo := strings.TrimPrefix(URL, "https://github.com/")
 	repo = strings.TrimSuffix(repo, "/tree/main")
 
-	rawFileUrl := "https://raw.githubusercontent.com/" + repo + "/refs/heads/" + branch
+	rawFileUrl := "https://raw.githubusercontent.com/" + repo + "/refs/heads/" + BRANCH
 
-	html := getHtml(url)
+	html := getHtml(URL)
 	json := getJson(html, `{"props":{"initialPayload":`)
 	items := gjson.Get(json, "props.initialPayload.tree.items")
 
-	rootDirectoriesUrls, rootFileUrls := getDirectories(items, url, rawFileUrl)
+	rootDirectoriesUrls, rootFileUrls := getDirectories(items, URL, rawFileUrl)
 
 	var allFileUrls []string
 	allFileUrls = append(allFileUrls, rootFileUrls...)
 
-	recursiveDirectoryDepthFirstSearch(rootDirectoriesUrls, rawFileUrl, url, &allFileUrls)
+	recursiveDirectoryDepthFirstSearch(rootDirectoriesUrls, rawFileUrl, URL, &allFileUrls)
 
 	return allFileUrls
 }
