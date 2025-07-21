@@ -1,4 +1,4 @@
-# ClosedAI Code Analyzer
+# Github Repository Codebase Analyzer
 
 This Go project analyzes the contents of a GitHub repository by recursively crawling through all directories, identifying files with specific extensions, counting lines of code in those files, and saving the results to a JSON file.
 
