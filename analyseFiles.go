@@ -32,7 +32,7 @@ func analyseFiles(fileUrls []string, fileExtensions []string) AnalysisResult {
 		TotalLineCount: totalLineCount,
 	}
 
-	return result 
+	return result
 }
 
 func amountOfLinesInFile(url string) int {
