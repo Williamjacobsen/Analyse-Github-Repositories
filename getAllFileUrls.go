@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/tidwall/gjson"
 )
@@ -16,6 +17,7 @@ func getHtml(url string) string {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -70,6 +72,9 @@ func getDirectories(items gjson.Result, baseUrl string, rawFileUrl string) ([]st
 	return directoryUrls, fileUrls
 }
 
+// Returns:
+//   - Sub directory URLs found
+//   - File URLs found
 func getDirectoriesWrapper(url string, rawFileUrl string, baseUrl string) ([]string, []string) {
 	html := getHtml(url)
 
@@ -80,43 +85,40 @@ func getDirectoriesWrapper(url string, rawFileUrl string, baseUrl string) ([]str
 	return getDirectories(items, baseUrl, rawFileUrl)
 }
 
-/*
-given an array of directories (from root)
+func worker(
+	toDiscoverCh chan string,
+	toDiscoverChResultFiles chan<- []string,
+	rawFileUrl string,
+	baseUrl string,
+	workWG *sync.WaitGroup,
+	workersWG *sync.WaitGroup,
+) {
+	defer workersWG.Done()
 
-if no directories return
-otherwise find all sub directories of each directory - for each:
-
-	call self with array of newly discovered sub directories
-	also append found files to allFileUrls
-*/
-func recursiveDirectoryDepthFirstSearch(directories []string, rawFileUrl string, baseUrl string, allFileUrls *[]string) {
-	if len(directories) == 0 {
-		return
-	}
-
-	for _, directory := range directories {
+	for urlToDiscover := range toDiscoverCh {
 		if LOGGING {
-			fmt.Println("Visiting:", directory)
+			fmt.Println("Visiting:", urlToDiscover)
 		}
 
-		subDirectories, fileUrls := getDirectoriesWrapper(directory, rawFileUrl, baseUrl)
+		subDirs, fileUrls := getDirectoriesWrapper(urlToDiscover, rawFileUrl, baseUrl)
 
-		*allFileUrls = append(*allFileUrls, fileUrls...)
+		for _, subDir := range subDirs {
+			workWG.Add(1)
+			toDiscoverCh <- subDir
+		}
 
-		recursiveDirectoryDepthFirstSearch(subDirectories, rawFileUrl, baseUrl, allFileUrls)
+		if len(fileUrls) > 0 {
+			toDiscoverChResultFiles <- fileUrls
+		}
+
+		workWG.Done()
 	}
 }
 
-func getAllFileUrls() []string {
-	/*
-		At the root directory the json that should be search for is `{"props":{"initialPayload":`
-		And the JSON path to the data is "props.initialPayload.tree.items".
-
-		At a nested directory it should be `{"payload":{`
-		And the JSON path is "payload.tree.items"
-	*/
-
-	// TODO: Error if it doesn't have /tree/main surffix
+func discoverAllDirectoriesConcurrently() []string {
+	if !strings.HasSuffix(URL, "/tree/main") {
+		log.Fatal("URL must end with /tree/main")
+	}
 
 	repo := strings.TrimPrefix(URL, "https://github.com/")
 	repo = strings.TrimSuffix(repo, "/tree/main")
@@ -127,12 +129,38 @@ func getAllFileUrls() []string {
 	json := getJson(html, `{"props":{"initialPayload":`)
 	items := gjson.Get(json, "props.initialPayload.tree.items")
 
-	rootDirectoriesUrls, rootFileUrls := getDirectories(items, URL, rawFileUrl)
+	rootDirs, _ := getDirectories(items, URL, rawFileUrl)
 
-	var allFileUrls []string
-	allFileUrls = append(allFileUrls, rootFileUrls...)
+	toDiscoverCh := make(chan string, 500)
+	toDiscoverChResultFiles := make(chan []string, 500)
 
-	recursiveDirectoryDepthFirstSearch(rootDirectoriesUrls, rawFileUrl, URL, &allFileUrls)
+	var workWG sync.WaitGroup
+	var workersWG sync.WaitGroup
 
-	return allFileUrls
+	workersWG.Add(NUMBER_OF_WORKERS)
+	for w := 1; w <= NUMBER_OF_WORKERS; w++ {
+		go worker(toDiscoverCh, toDiscoverChResultFiles, rawFileUrl, URL, &workWG, &workersWG)
+	}
+
+	go func() {
+		workersWG.Wait()
+		close(toDiscoverChResultFiles)
+	}()
+
+	for _, dir := range rootDirs {
+		workWG.Add(1)
+		toDiscoverCh <- dir
+	}
+
+	go func() {
+		workWG.Wait()
+		close(toDiscoverCh)
+	}()
+
+	fileUrls := []string{}
+	for results := range toDiscoverChResultFiles {
+		fileUrls = append(fileUrls, results...)
+	}
+
+	return fileUrls
 }
