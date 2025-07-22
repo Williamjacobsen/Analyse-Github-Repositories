@@ -7,10 +7,15 @@ import (
 	"sync"
 )
 
+type LanguageLineCount struct {
+	Extension string `json:"extension"`
+	Lines     int    `json:"lines"`
+}
+
 type AnalysisResult struct {
-	FileLines            map[string]int `json:"files and their lines"`
-	LineCountPerLanguage map[string]int `json:"lines per language"`
-	TotalLineCount       int            `json:"total amount of lines"`
+	FileLines            map[string]int      `json:"files and their lines"`
+	LineCountPerLanguage []LanguageLineCount `json:"lines per language"`
+	TotalLineCount       int                 `json:"total amount of lines"`
 }
 
 func analyseFiles(fileUrls []string, fileExtensions []string) AnalysisResult {
@@ -93,12 +98,12 @@ func totalAmountOfLines(fileLines map[string]int) int {
 	return totalLines
 }
 
-func lineCountPerLanguage(fileLines map[string]int) map[string]int {
+func lineCountPerLanguage(fileLines map[string]int) []LanguageLineCount {
 	linesPerLang := map[string]int{}
 
 	for url, lines := range fileLines {
 		linesPerLang[getFileExtensionFromUrl(url)] += lines
 	}
 
-	return linesPerLang
+	return sortMap(linesPerLang)
 }
