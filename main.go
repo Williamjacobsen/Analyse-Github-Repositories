@@ -37,7 +37,7 @@ func main() {
 
 	// Time taken:
 	// Single threaded: ~11 seconds
-	// 10 workers: ~1-1.5 seconds
+	// 10 workers: ~1-2 seconds
 	startNow = time.Now()
 	result := analyseFiles(fileUrls, fileExtensions)
 	analyseFilesTime := time.Since(startNow)

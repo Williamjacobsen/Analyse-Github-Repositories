@@ -8,13 +8,13 @@ import (
 )
 
 type AnalysisResult struct {
-	FileLines      map[string]int `json:"files and their lines"`
-	TotalLineCount int            `json:"total amount of lines"`
+	FileLines            map[string]int `json:"files and their lines"`
+	LineCountPerLanguage map[string]int `json:"lines per language"`
+	TotalLineCount       int            `json:"total amount of lines"`
 }
 
 func analyseFiles(fileUrls []string, fileExtensions []string) AnalysisResult {
 	fileLines := map[string]int{}
-	var mu sync.Mutex
 
 	type job struct {
 		url string
@@ -64,16 +64,16 @@ func analyseFiles(fileUrls []string, fileExtensions []string) AnalysisResult {
 	}()
 
 	for result := range results {
-		mu.Lock()
 		fileLines[result.url] = result.lineCount
-		mu.Unlock()
 	}
 
+	lineCountPerLanguage := lineCountPerLanguage(fileLines)
 	totalLineCount := totalAmountOfLines(fileLines)
 
 	return AnalysisResult{
-		FileLines:      fileLines,
-		TotalLineCount: totalLineCount,
+		FileLines:            fileLines,
+		LineCountPerLanguage: lineCountPerLanguage,
+		TotalLineCount:       totalLineCount,
 	}
 }
 
@@ -91,4 +91,14 @@ func totalAmountOfLines(fileLines map[string]int) int {
 	}
 
 	return totalLines
+}
+
+func lineCountPerLanguage(fileLines map[string]int) map[string]int {
+	linesPerLang := map[string]int{}
+
+	for url, lines := range fileLines {
+		linesPerLang[getFileExtensionFromUrl(url)] += lines
+	}
+
+	return linesPerLang
 }
