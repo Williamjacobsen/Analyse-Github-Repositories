@@ -1,13 +1,13 @@
 # Github Repository Codebase Analyzer
 
-This Go project analyzes the contents of a GitHub repository by recursively crawling through all directories, identifying files with specific extensions, counting lines of code in those files, and saving the results to a JSON file.
+This Go project analyzes the contents of a GitHub repository by concurrently crawling directories, identifying files with specific extensions, counting lines of code in those files, and saving the results in a structured JSON format.
 
 ## Features
 
 - Concurrent traversal of GitHub repository directories
 - Configurable file extension filtering (`fileExtensions.txt`)
 - Line counting for selected file types
-- JSON output of file-wise and total line counts
+- JSON output for file line analysis
 - Logging for time measurements and progress tracking
 
 ## How It Works
@@ -46,10 +46,21 @@ The result is saved as **analysis_result.json**:
 ```json
 {
   "files and their lines": {
-    "https://raw.githubusercontent.com/your/repo/file1.go": 123,
-    "https://raw.githubusercontent.com/your/repo/file2.py": 87
+    "https://raw.githubusercontent.com/your/repo/file1.java": 856,
+    "https://raw.githubusercontent.com/your/repo/file2.java": 428,
+    "https://raw.githubusercontent.com/your/repo/file3.py": 643
   },
-  "total amount of lines": 210
+  "lines per language": [
+    {
+      "extension": ".java",
+      "lines": 1284
+    },
+    {
+      "extension": ".py",
+      "lines": 643
+    }
+  ],
+  "total amount of lines": 1927
 }
 ```
 
