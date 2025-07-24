@@ -1,6 +1,6 @@
 # Github Repository Codebase Analyzer
 
-This Go project analyzes the contents of a GitHub repository by concurrently crawling directories, identifying files with specific extensions, counting lines of code in those files, and saving the results in a structured JSON format.
+A high-performance Go tool that crawls GitHub repositories, filters files by extension, analyzes line counts, and saves the results as JSON — with concurrency using goroutines, channels, and a worker pool for efficient performance.
 
 ## Features
 
