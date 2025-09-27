@@ -129,7 +129,7 @@ func discoverAllDirectoriesConcurrently() []string {
 	json := getJson(html, `{"props":{"initialPayload":`)
 	items := gjson.Get(json, "props.initialPayload.tree.items")
 
-	rootDirs, _ := getDirectories(items, URL, rawFileUrl)
+	rootDirs, rootFiles := getDirectories(items, URL, rawFileUrl)
 
 	toDiscoverCh := make(chan string, 500)
 	toDiscoverChResultFiles := make(chan []string, 500)
@@ -157,7 +157,7 @@ func discoverAllDirectoriesConcurrently() []string {
 		close(toDiscoverCh)
 	}()
 
-	fileUrls := []string{}
+	fileUrls := append([]string(nil), rootFiles...)
 	for results := range toDiscoverChResultFiles {
 		fileUrls = append(fileUrls, results...)
 	}
