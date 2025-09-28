@@ -5,7 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
+	urlpkg "net/url"
 	"strings"
 	"sync"
 
@@ -56,7 +56,7 @@ func getDirectories(items gjson.Result, baseUrl string, rawFileUrl string) ([]st
 	var directoryUrls []string
 
 	items.ForEach(func(_, item gjson.Result) bool {
-		path := url.PathEscape(item.Get("path").Str)
+		path := urlpkg.PathEscape(item.Get("path").Str)
 		contentType := item.Get("contentType").Str
 
 		switch contentType {
@@ -160,6 +160,12 @@ func discoverAllDirectoriesConcurrently() []string {
 	fileUrls := append([]string(nil), rootFiles...)
 	for results := range toDiscoverChResultFiles {
 		fileUrls = append(fileUrls, results...)
+	}
+
+	for i := range fileUrls {
+		if decoded, err := urlpkg.PathUnescape(fileUrls[i]); err == nil {
+			fileUrls[i] = decoded	
+		}
 	}
 
 	return fileUrls
